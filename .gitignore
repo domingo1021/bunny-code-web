@@ -1,2 +1,29 @@
-.DS_Store
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# App-specific rules live in web/.gitignore
 
+# OS
+.DS_Store
+Thumbs.db
+
+# editors / IDEs
+.idea/
+.vscode/
+*.swp
+
+# dependencies
+node_modules/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (the example is committed on purpose)
+.env
+.env.*
+!.env.example
+
+# claude code (shared settings are committed, local overrides are not)
+.claude/settings.local.json

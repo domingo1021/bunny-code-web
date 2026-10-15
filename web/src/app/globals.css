@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/*
+ * Bunny Code design tokens.
+ *
+ * The original Vue app hardcoded colours like `#161b22` and `rgb(36, 36, 36)`
+ * across nearly 2,000 lines of scoped CSS and inline `style=` attributes. Everything
+ * is a token here instead, so the whole surface is themeable from one place.
+ *
+ * The palette keeps the app's dark GitHub-ish identity. Foreground/background
+ * pairs are chosen to clear WCAG AA (4.5:1 for body text, 3:1 for large text
+ * and UI boundaries).
+ */
+
+@theme {
+  /* Surfaces, darkest to lightest */
+  --color-canvas: oklch(0.17 0.012 265);
+  --color-surface: oklch(0.21 0.014 265);
+  --color-surface-raised: oklch(0.25 0.016 265);
+  --color-surface-overlay: oklch(0.28 0.018 265);
+
+  /* Text */
+  --color-ink: oklch(0.95 0.004 265);
+  --color-ink-muted: oklch(0.76 0.012 265);
+  --color-ink-subtle: oklch(0.63 0.014 265);
+
+  /* Borders */
+  --color-edge: oklch(0.34 0.016 265);
+  --color-edge-strong: oklch(0.45 0.02 265);
+
+  /*
+   * Two accents, carrying meaning rather than decoration. The product is
+   * entirely about the difference between a session already recorded and one
+   * happening now, so colour encodes that: violet for replay and anything
+   * from the past, amber for live.
+   */
+  --color-brand: oklch(0.7 0.19 300);
+  --color-brand-strong: oklch(0.62 0.21 300);
+  --color-brand-ink: oklch(0.17 0.012 265);
+  --color-live: oklch(0.8 0.15 75);
+  --color-live-ink: oklch(0.17 0.012 265);
+
+  /* Status */
+  --color-success: oklch(0.75 0.17 155);
+  --color-warning: oklch(0.82 0.16 85);
+  --color-danger: oklch(0.68 0.2 25);
+  --color-info: oklch(0.72 0.14 240);
+
+  /* Editor accents, matched to the Dracula theme used by CodeMirror */
+  --color-editor-bg: oklch(0.24 0.02 285);
+  --color-editor-gutter: oklch(0.29 0.022 285);
+
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+  /* Display is the monospace: the subject is typed code, so the face that
+     renders code also sets the headlines. */
+  --font-display: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* Radii carry hierarchy rather than being one value on everything: panels
+     that hold a surface are squarer than the controls inside them. */
+  --radius-card: 0.5rem;
+  --radius-panel: 0.25rem;
+
+  /* Height of the fixed top nav; layouts offset by this instead of the Vue
+     app's magic `padding-top: 60px` / `top: 50px` numbers. */
+  --spacing-nav: 3.5rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-edge);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* A single visible focus style for every interactive element. The Vue app
+     removed outlines (`#input-area:focus { outline: none }`) without replacing
+     them, which made the UI unusable by keyboard. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-brand) 40%, transparent);
+  }
+}
+
+@layer utilities {
+  /* Honour users who ask for less motion; the replay and countdown UIs animate. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

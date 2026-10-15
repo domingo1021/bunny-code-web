@@ -1,0 +1,14 @@
+node_modules
+.next
+coverage
+test-results
+playwright-report
+blob-report
+.env*
+!.env.example
+.husky
+e2e
+e2e-integration
+*.md
+Dockerfile
+.dockerignore

@@ -1,0 +1,9 @@
+.next
+out
+build
+coverage
+playwright-report
+test-results
+package-lock.json
+public/mockServiceWorker.js
+next-env.d.ts
