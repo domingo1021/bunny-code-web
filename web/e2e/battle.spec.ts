@@ -206,7 +206,7 @@ test.describe("the battle room", () => {
       .getByRole("region", { name: /'s code$/ })
       .filter({ has: page.getByText("(you)") });
     await mine.locator(".cm-content").click();
-    await page.keyboard.press("Meta+a");
+    await page.keyboard.press("ControlOrMeta+a");
     await page.keyboard.insertText(TWO_SUM_SOLUTION);
 
     await page.getByRole("button", { name: "Submit" }).click();
