@@ -13,11 +13,11 @@ name: web-ci
 
 on:
   pull_request:
-    paths: ["web/**", ".github/workflows/web-*.yml"]
+    paths-ignore: ["README.md", "Archives/**", ".claude/**", ".idea/**"]
   push:
     # `main` is covered by the release workflow, which runs this as its first stage.
     branches: [v2]
-    paths: ["web/**", ".github/workflows/web-*.yml"]
+    paths-ignore: ["README.md", "Archives/**", ".claude/**", ".idea/**"]
   workflow_call:
 
 concurrency:
@@ -31,10 +31,6 @@ env:
   NODE_VERSION: "24"
   NEXT_TELEMETRY_DISABLED: "1"
 
-defaults:
-  run:
-    working-directory: web
-
 jobs:
   static:
     name: typecheck · lint · format
@@ -46,7 +42,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
@@ -62,14 +58,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run test:cov
       - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: web-coverage
-          path: web/coverage
+          path: coverage
           retention-days: 7
 
   e2e:
@@ -82,7 +78,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
@@ -91,8 +87,8 @@ jobs:
         with:
           name: web-e2e-report
           path: |
-            web/playwright-report
-            web/test-results
+            playwright-report
+            test-results
           retention-days: 7
 
   integration:
@@ -143,7 +139,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
@@ -155,7 +151,7 @@ jobs:
         with:
           name: web-integration-report
           path: |
-            web/test-results
+            test-results
             backend/api.log
           retention-days: 7
 
@@ -169,7 +165,7 @@ jobs:
       - name: Build (not pushed)
         uses: docker/build-push-action@v6
         with:
-          context: web
+          context: .
           push: false
           build-args: |
             NEXT_PUBLIC_API_URL=https://ci.invalid/api/v2

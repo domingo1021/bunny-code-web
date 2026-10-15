@@ -49,18 +49,18 @@ for everyone to read. Anyone can spectate, read-only.
 
 ## Stack
 
-| | |
-|---|---|
-| **Framework** | Next.js 16 (App Router, RSC, Partial Prerendering) · React 19.3 |
-| **Language** | TypeScript 5.9, `strict` + `noUncheckedIndexedAccess` |
-| **Styling** | Tailwind CSS 4 (CSS-first `@theme` tokens) · Radix UI primitives |
-| **Type** | JetBrains Mono as the display face, Archivo for interface prose |
-| **Server state** | TanStack Query 5 |
-| **Client state** | Zustand 5 |
-| **Editor** | CodeMirror 6 |
-| **Forms** | React Hook Form + Zod 4 (Zod also validates every API response) |
-| **Testing** | Vitest 5 · Testing Library · fast-check · MSW 3 · Playwright · axe |
-| **Tooling** | ESLint 10 (flat, with architectural boundary rules) · Prettier · Husky · GitHub Actions |
+|                  |                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| **Framework**    | Next.js 16 (App Router, RSC, Partial Prerendering) · React 19.3                         |
+| **Language**     | TypeScript 5.9, `strict` + `noUncheckedIndexedAccess`                                   |
+| **Styling**      | Tailwind CSS 4 (CSS-first `@theme` tokens) · Radix UI primitives                        |
+| **Type**         | JetBrains Mono as the display face, Archivo for interface prose                         |
+| **Server state** | TanStack Query 5                                                                        |
+| **Client state** | Zustand 5                                                                               |
+| **Editor**       | CodeMirror 6                                                                            |
+| **Forms**        | React Hook Form + Zod 4 (Zod also validates every API response)                         |
+| **Testing**      | Vitest 5 · Testing Library · fast-check · MSW 3 · Playwright · axe                      |
+| **Tooling**      | ESLint 10 (flat, with architectural boundary rules) · Prettier · Husky · GitHub Actions |
 
 ---
 
@@ -82,7 +82,7 @@ STOMP over WebSocket. So that the demo still deploys as a static site, the app a
 
 - **HTTP** — [MSW](https://mswjs.io) handlers over a seeded in-memory domain model. The
   same handlers serve `next dev`, Vitest, Playwright, and the deployed demo (where the
-  service worker genuinely *is* the API).
+  service worker genuinely _is_ the API).
 - **Realtime** — a `RealtimeTransport` interface with two implementations: STOMP against
   the API when `NEXT_PUBLIC_API_URL` is set, and an in-browser **scripted opponent** when
   it is not. The opponent readies up, types a real solution keystroke by keystroke,
@@ -102,7 +102,7 @@ real recorder**, so every one is provably replayable, and a test asserts exactly
 ## Architecture
 
 ```
-web/src/
+src/
   core/          Pure TypeScript. No React, no Next, no I/O.
     replay/      applyEdit · recordEdit · timeline · ReplayClock
     sandbox/     code evaluation · console formatting · test-case judging
@@ -155,13 +155,13 @@ reintroducing the original bug fails 8 tests, including all four property tests.
 which is `NaN`. `setTimeout(fn, NaN)` fires immediately, so every replay ran flat out
 rather than at the speed it was typed.
 
-**The replay scheduler leaked.** Teardown set `keepPlay = false` on the *ref object*
+**The replay scheduler leaked.** Teardown set `keepPlay = false` on the _ref object_
 instead of `keepPlay.value` (`:1224`), so the flag never changed and pending timers kept
 firing against an unmounted editor. Replaced by a clock whose disposal is tied to effect
 cleanup.
 
 **Replay could only go forwards.** Position was a `for` loop counter, so there was
-nowhere to seek *to*. Position is now elapsed time and the document is a pure function of
+nowhere to seek _to_. Position is now elapsed time and the document is a pure function of
 it, so scrubbing backwards costs what scrubbing forwards does.
 
 **Socket listeners leaked.** `socketOff(name)` called `removeAllListeners(name)`, so one
@@ -171,7 +171,7 @@ every visit. Subscriptions now return a disposer tied to the effect.
 
 **Every failure path could throw while reporting.** `error.response.data.msg` was read
 unconditionally, so any failure that wasn't a JSON API response — a dropped connection, a
-proxy's HTML error page — threw a second error *while handling the first*, and the user
+proxy's HTML error page — threw a second error _while handling the first_, and the user
 saw nothing.
 
 **Nothing was keyboard accessible.** Project and user names were `<div>`s with `@click`
@@ -209,27 +209,33 @@ backend. React components are covered by the Playwright suite instead, which
 drives a real browser on two viewports and runs axe on every route; asserting
 the same behaviour again against jsdom would duplicate it at lower fidelity.
 
-| Layer | What it covers |
-|---|---|
-| **Pure core** (Vitest, Node) | `applyEdit` per action; **record → replay round-trip property test** over random keystroke sequences; `ReplayClock` play/pause/seek/speed under an injected clock; sandbox timeout, console capture, output truncation; test-case judging |
-| **Fixtures** | Every seeded recording replays to the file the API serves. Every battle solution is **executed in the sandbox** and judged by the same code the battle screen uses, so a wrong expected value fails the build |
-| **Boundary** (Vitest + MSW) | Every v2 endpoint through the real client and the real Zod schemas — problem details, auth, privacy rules, error mapping; the STOMP transport against a fake broker client |
-| **State machines** | The battle flow as a pure reducer over the server's snapshot and events: ready handshake, countdown, reconnect resync, duplicate `STARTED`, simultaneous endings, forfeits |
-| **End-to-end** (Playwright) | Sign in → create project → type → **save → scrub to start → scrub to end → byte-identical file**; win a battle against the scripted opponent; infinite loop terminates instead of hanging the tab; paste is refused |
-| **Accessibility** | axe on every route, zero violations, desktop and mobile |
-| **Bundle** | Asserts the editor is not in the home page's JavaScript |
+| Layer                                  | What it covers                                                                                                                                                                                                                                                                                       |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pure core** (Vitest, Node)           | `applyEdit` per action; **record → replay round-trip property test** over random keystroke sequences; `ReplayClock` play/pause/seek/speed under an injected clock; sandbox timeout, console capture, output truncation; test-case judging                                                            |
+| **Fixtures**                           | Every seeded recording replays to the file the API serves. Every battle solution is **executed in the sandbox** and judged by the same code the battle screen uses, so a wrong expected value fails the build                                                                                        |
+| **Boundary** (Vitest + MSW)            | Every v2 endpoint through the real client and the real Zod schemas — problem details, auth, privacy rules, error mapping; the STOMP transport against a fake broker client                                                                                                                           |
+| **State machines**                     | The battle flow as a pure reducer over the server's snapshot and events: ready handshake, countdown, reconnect resync, duplicate `STARTED`, simultaneous endings, forfeits                                                                                                                           |
+| **End-to-end** (Playwright)            | Sign in → create project → type → **save → scrub to start → scrub to end → byte-identical file**; win a battle against the scripted opponent; infinite loop terminates instead of hanging the tab; paste is refused                                                                                  |
+| **Accessibility**                      | axe on every route, zero violations, desktop and mobile                                                                                                                                                                                                                                              |
+| **Bundle**                             | Asserts the editor is not in the home page's JavaScript                                                                                                                                                                                                                                              |
 | **Integration** (Playwright, real API) | `npm run test:integration` against the Spring Boot API and its MySQL, Redis, InfluxDB, S3 and Docker sandbox: accounts, private projects, record → reload → replay, versions, stars, views, server-side runs, and two-browser battles (invitations, judged submissions, forfeit, spectators, expiry) |
-| **The hero** | Asserts the home page's recording actually advances, exposes the finished code to assistive technology rather than the animation, and does not animate under `prefers-reduced-motion` |
+| **The hero**                           | Asserts the home page's recording actually advances, exposes the finished code to assistive technology rather than the animation, and does not animate under `prefers-reduced-motion`                                                                                                                |
 
 The round-trip property test is the one that matters:
 
 ```ts
 // Any random keystroke sequence must replay to a byte-identical document.
-fc.assert(fc.property(startingText, fc.array(keystroke), (text, strokes) => {
-  const { records, doc: recorded } = recordSession(docFromText(text), strokes);
-  expect(docToText(applyEdits(docFromText(text), records)))
-    .toBe(docToText(recorded));
-}));
+fc.assert(
+  fc.property(startingText, fc.array(keystroke), (text, strokes) => {
+    const { records, doc: recorded } = recordSession(
+      docFromText(text),
+      strokes,
+    );
+    expect(docToText(applyEdits(docFromText(text), records))).toBe(
+      docToText(recorded),
+    );
+  }),
+);
 ```
 
 ---
@@ -260,7 +266,7 @@ The STOMP URL is derived from it (`…/api/v2/ws`); `NEXT_PUBLIC_REALTIME_URL` o
 **[`INSTRUCTION.md`](../Bunny-code/INSTRUCTION.md)** in the backend repository covers the
 whole local setup — MySQL, Redis, InfluxDB, S3, the API, demo data, and every test suite.
 
-**Deployment:** `web/Dockerfile` builds the standalone Next.js server. `web-ci.yml` and
+**Deployment:** `Dockerfile` builds the standalone Next.js server. `web-ci.yml` and
 `web-release.yml` test it, publish it to GHCR and roll it out behind nginx next to the API,
 with automatic rollback. See [`docs/CICD.md`](../Bunny-code/docs/CICD.md) in the backend repository.
 
