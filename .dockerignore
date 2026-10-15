@@ -12,3 +12,10 @@ e2e-integration
 *.md
 Dockerfile
 .dockerignore
+# Repository furniture, outside the app since the build context became the repo root.
+.git
+.github
+.claude
+.idea
+Archives
+backend
