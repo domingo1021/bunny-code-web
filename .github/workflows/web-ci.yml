@@ -1,0 +1,177 @@
+# Continuous integration for the Next.js web app (server-side rendered React).
+#
+#   static       typecheck · ESLint (incl. feature boundaries) · Prettier
+#   unit         Vitest: core logic, hooks, the API client and the MSW mock API, with coverage
+#   e2e          Playwright on a production build in demo mode (MSW + scripted opponent),
+#                desktop and mobile, with axe accessibility checks
+#   integration  Playwright against the real Spring Boot API: the backend repository is checked
+#                out, its MySQL/Redis/InfluxDB/S3 stack started, the API run from source
+#   image        builds the production Docker image (standalone server; not pushed)
+#
+# Also called by web-release.yml, so nothing is released that did not pass exactly this.
+name: web-ci
+
+on:
+  pull_request:
+    paths: ["web/**", ".github/workflows/web-*.yml"]
+  push:
+    # `main` is covered by the release workflow, which runs this as its first stage.
+    branches: [v2]
+    paths: ["web/**", ".github/workflows/web-*.yml"]
+  workflow_call:
+
+concurrency:
+  group: web-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  static:
+    name: typecheck · lint · format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+
+  unit:
+    name: unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run test:cov
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: web-coverage
+          path: web/coverage
+          retention-days: 7
+
+  e2e:
+    name: e2e · a11y (demo mode)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: web-e2e-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 7
+
+  integration:
+    name: integration (real API)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      # The API from the matching branch of the backend repository: `v2` with `v2`, `main`
+      # with `main`. Override with the BACKEND_REF repository variable.
+      - name: Check out the backend
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ vars.BACKEND_REPOSITORY || format('{0}/Bunny-code', github.repository_owner) }}
+          ref: ${{ vars.BACKEND_REF || github.base_ref || github.ref_name }}
+          path: backend
+          # Only needed while the backend repository is private.
+          token: ${{ secrets.BACKEND_REPO_TOKEN || github.token }}
+
+      - name: Start MySQL, Redis, InfluxDB and S3
+        working-directory: backend
+        run: |
+          docker compose -f Docker/local/compose.yaml up -d --wait
+          docker pull node:24-alpine
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Start the API
+        working-directory: backend
+        run: |
+          ./mvnw -B -ntp -DskipTests package
+          nohup java -jar target/bunny-code-*.jar --spring.profiles.active=local > api.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:8080/actuator/health/readiness >/dev/null 2>&1 && exit 0
+            sleep 2
+          done
+          echo "The API did not become ready" >&2
+          tail -100 api.log >&2
+          exit 1
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # Builds the app against http://localhost:8080/api/v2 and serves it on :3100.
+      - run: npm run test:integration
+
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: web-integration-report
+          path: |
+            web/test-results
+            backend/api.log
+          retention-days: 7
+
+  image:
+    name: docker image builds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: web
+          push: false
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://ci.invalid/api/v2
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
